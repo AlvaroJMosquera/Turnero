@@ -1,0 +1,167 @@
+[
+  {
+    "cedula": "1001",
+    "nombre": "Carlos",
+    "apellidos": "Pérez Gómez",
+    "cargo": "Vigilante",
+    "celular": "3111111111",
+    "telefono": "572123456",
+    "direccion": "Calle 10 #1-23",
+    "fecha_ingreso": "2024-06-15",
+    "fecha_nacimiento": "1990-05-12"
+  },
+  {
+    "cedula": "1002",
+    "nombre": "Luisa",
+    "apellidos": "Martínez Díaz",
+    "cargo": "Supervisor",
+    "celular": "3122222222",
+    "telefono": "572654321",
+    "direccion": "Carrera 20 #45-60",
+    "fecha_ingreso": "2023-02-10",
+    "fecha_nacimiento": "1985-07-22"
+  },
+  {
+    "cedula": "1003",
+    "nombre": "Juan",
+    "apellidos": "Ramírez López",
+    "cargo": "Vigilante",
+    "celular": "3133333333",
+    "telefono": "572789012",
+    "direccion": "Avenida Siempreviva 123",
+    "fecha_ingreso": "2023-03-05",
+    "fecha_nacimiento": "1988-09-10"
+  },
+  {
+    "cedula": "1004",
+    "nombre": "María",
+    "apellidos": "González Torres",
+    "cargo": "Coordinadora",
+    "celular": "3144444444",
+    "telefono": "572456789",
+    "direccion": "Calle 8 #6-78",
+    "fecha_ingreso": "2023-03-15",
+    "fecha_nacimiento": "1982-03-15"
+  },
+  {
+    "cedula": "1005",
+    "nombre": "Pedro",
+    "apellidos": "Salazar Mejía",
+    "cargo": "Portero",
+    "celular": "3155555555",
+    "telefono": "572987654",
+    "direccion": "Cra 7 #8-90",
+    "fecha_ingreso": "2023-04-01",
+    "fecha_nacimiento": "1992-11-30"
+  },
+  {
+    "cedula": "1006",
+    "nombre": "Andrea",
+    "apellidos": "Morales Ríos",
+    "cargo": "Vigilante",
+    "celular": "3166666666",
+    "telefono": "572321098",
+    "direccion": "Calle 12 #12-12",
+    "fecha_ingreso": "2023-04-20",
+    "fecha_nacimiento": "1995-06-25"
+  },
+  {
+    "cedula": "1007",
+    "nombre": "Fernando",
+    "apellidos": "Osorio Pérez",
+    "cargo": "Vigilante",
+    "celular": "3177777777",
+    "telefono": "572000111",
+    "direccion": "Cra 15 #25-30",
+    "fecha_ingreso": "2023-05-10",
+    "fecha_nacimiento": "1987-02-17"
+  },
+  {
+    "cedula": "1008",
+    "nombre": "Natalia",
+    "apellidos": "Reyes Álvarez",
+    "cargo": "Supervisora",
+    "celular": "3188888888",
+    "telefono": "572111222",
+    "direccion": "Calle 20 #15-45",
+    "fecha_ingreso": "2023-06-01",
+    "fecha_nacimiento": "1993-08-05"
+  },
+  {
+    "cedula": "1009",
+    "nombre": "Jorge",
+    "apellidos": "Hernández Pinto",
+    "cargo": "Portero",
+    "celular": "3199999999",
+    "telefono": "572333444",
+    "direccion": "Cra 9 #10-11",
+    "fecha_ingreso": "2023-06-15",
+    "fecha_nacimiento": "1989-12-12"
+  },
+  {
+    "cedula": "1010",
+    "nombre": "Paola",
+    "apellidos": "Vargas Castro",
+    "cargo": "Auxiliar",
+    "celular": "3101010101",
+    "telefono": "572555666",
+    "direccion": "Av. Principal 30-30",
+    "fecha_ingreso": "2023-07-01",
+    "fecha_nacimiento": "1991-01-20"
+  },
+  {
+    "cedula": "1011",
+    "nombre": "Luis",
+    "apellidos": "Córdoba Morales",
+    "cargo": "Vigilante",
+    "celular": "3112121212",
+    "telefono": "572666777",
+    "direccion": "Cra 30 #40-50",
+    "fecha_ingreso": "2023-07-10",
+    "fecha_nacimiento": "1984-04-04"
+  },
+  {
+    "cedula": "1012",
+    "nombre": "Tatiana",
+    "apellidos": "Jiménez Ramírez",
+    "cargo": "Vigilante",
+    "celular": "3122323232",
+    "telefono": "572777888",
+    "direccion": "Calle 5 #4-3",
+    "fecha_ingreso": "2023-07-20",
+    "fecha_nacimiento": "1996-10-10"
+  },
+  {
+    "cedula": "1013",
+    "nombre": "David",
+    "apellidos": "Guerrero López",
+    "cargo": "Supervisor",
+    "celular": "3133434343",
+    "telefono": "572888999",
+    "direccion": "Cra 1 #2-2",
+    "fecha_ingreso": "2023-08-01",
+    "fecha_nacimiento": "1983-03-03"
+  },
+  {
+    "cedula": "1014",
+    "nombre": "Carolina",
+    "apellidos": "Delgado Salas",
+    "cargo": "Auxiliar",
+    "celular": "3144545454",
+    "telefono": "572999000",
+    "direccion": "Av. Circunvalar 100",
+    "fecha_ingreso": "2023-08-15",
+    "fecha_nacimiento": "1990-09-09"
+  },
+  {
+    "cedula": "1015",
+    "nombre": "Esteban",
+    "apellidos": "Arango Torres",
+    "cargo": "Portero",
+    "celular": "3155656565",
+    "telefono": "572111333",
+    "direccion": "Callejón #99",
+    "fecha_ingreso": "2023-09-01",
+    "fecha_nacimiento": "1992-02-02"
+  }
+]

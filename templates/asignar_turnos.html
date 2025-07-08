@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Asignar Turnos Automáticamente</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5; }
+        h1, h2 { color: #333; }
+        .resultados { margin-top: 20px; }
+        .oficina-card {
+            background-color: #fff; border: 1px solid #ccc;
+            padding: 15px; margin-bottom: 15px; border-radius: 5px;
+        }
+        ul { list-style: none; padding-left: 0; }
+    </style>
+</head>
+<body>
+    <h1>Asignación Automática de Turnos por Oficina</h1>
+    <button onclick="generar()">Generar Turnos para el Próximo Mes</button>
+
+    <div class="resultados" id="resultados"></div>
+
+    <script>
+        function generar() {
+            fetch("/asignar-turnos/next-month/")
+                .then(res => res.json())
+                .then(data => {
+                    const cont = document.getElementById("resultados");
+                    cont.innerHTML = "";
+
+                    data.forEach(ofi => {
+                        const card = document.createElement("div");
+                        card.className = "oficina-card";
+                        card.innerHTML = `<h2>${ofi.nombre}</h2>`;
+
+                        ofi.turnos.forEach(turno => {
+                            const ul = document.createElement("ul");
+                            ul.innerHTML = `
+                                <strong>${turno.fecha} (${turno.turno}):</strong>
+                                <ul>
+                                    ${turno.trabajadores.map(t => `<li>${t.nombre} (${t.cedula})</li>`).join("")}
+                                </ul>
+                            `;
+                            card.appendChild(ul);
+                        });
+
+                        cont.appendChild(card);
+                    });
+                });
+        }
+    </script>
+</body>
+</html>
