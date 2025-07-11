@@ -5,6 +5,7 @@ from database import Base
 from pydantic import BaseModel
 from typing import Optional, List
 
+
 # ===================== #
 #      MODELOS ORM      #
 # ===================== #
@@ -16,7 +17,7 @@ class Worker(Base):
     cedula = Column(String(20), unique=True, index=True, nullable=False)
     nombre = Column(String(100))
     apellidos = Column(String(100))
-    cargo = Column(String(100))
+    cargo_id = Column(Integer, ForeignKey("roles.id"))
     celular = Column(String(20), nullable=True)
     telefono = Column(String(20), nullable=True)
     direccion = Column(String(255), nullable=True)
@@ -26,7 +27,7 @@ class Worker(Base):
 
     office_id = Column(Integer, ForeignKey("offices.id"), nullable=True)
     oficina = relationship("Office")
-
+    rol = relationship("Role", back_populates="trabajadores")
     registros = relationship("Record", back_populates="trabajador")
     vacaciones = relationship("Vacation", back_populates="trabajador")
 
@@ -72,6 +73,7 @@ class OfficeShiftRequirement(Base):
     office_id = Column(Integer, ForeignKey("offices.id"))
     turno = Column(String(10), nullable=False)  
     cantidad = Column(Integer, nullable=False)
+    cargo = Column(String(50), nullable=False)
 
     office = relationship("Office", back_populates="requerimientos")
 
@@ -97,7 +99,7 @@ class WorkerCreate(BaseModel):
     cedula: str
     nombre: str
     apellidos: str
-    cargo: str
+    cargo_id: int
     celular: Optional[str] = None
     telefono: Optional[str] = None
     direccion: Optional[str] = None
@@ -148,6 +150,8 @@ class OfficeCreate(OfficeBase):
     pass
 
 
+
+
 # --- Shift Requirement ---
 class ShiftRequirementBase(BaseModel):
     turno: str
@@ -164,3 +168,12 @@ class Assignment(BaseModel):
     turno: str
     worker_id: int
     office_id: int
+
+class Role(Base):
+    __tablename__ = "roles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String(100), unique=True, nullable=False)
+
+    trabajadores = relationship("Worker", back_populates="rol")
+

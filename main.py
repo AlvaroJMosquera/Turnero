@@ -14,12 +14,22 @@ import calendar
 from database import Base, engine, SessionLocal
 from models import (
     Worker, WorkerCreate, Vacation, VacationCreate,
-    Office, OfficeShiftRequirement, WorkerAssignment, OfficeCreate, ShiftRequirementCreate
+    Office, OfficeShiftRequirement, WorkerAssignment, OfficeCreate, ShiftRequirementCreate,Role
 )
 from logic import generate_schedule, asignar_y_guardar_turnos
 ## Eliminar y crear tablas ###
-#Base.metadata.drop_all(bind=engine)
-#Base.metadata.create_all(bind=engine)
+# Base.metadata.drop_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
+
+def seed_roles(db: Session):
+    nombres = ["Médico Veterinario", "Recepcionista"]
+    for nombre in nombres:
+        if not db.query(Role).filter_by(nombre=nombre).first():
+            db.add(Role(nombre=nombre))
+    db.commit()
+with SessionLocal() as db:
+    seed_roles(db)
+
 
 app = FastAPI()
 app.add_middleware(
@@ -63,7 +73,7 @@ def list_workers(db: Session = Depends(get_db)):
             "nombre": w.nombre,
             "apellidos": w.apellidos,
             "cedula": w.cedula,
-            "cargo": w.cargo,
+            "cargo": w.rol.nombre if w.rol else None,
             "oficina": {"id": w.oficina.id, "nombre": w.oficina.nombre} if w.oficina else None
         }
         for w in trabajadores
@@ -229,7 +239,7 @@ def home(request: Request):
 
 @app.get("/ver-turnos", response_class=HTMLResponse)
 def ver_turnos(request: Request):
-    return templates.TemplateResponse("turnos_mes.html", {"request": request})
+    return templates.TemplateResponse("ver_asignaciones.html", {"request": request})
 
 @app.get("/ver-trabajadores", response_class=HTMLResponse)
 def ver_trabajadores(request: Request):
@@ -240,8 +250,14 @@ def ver_vacaciones(request: Request):
     return templates.TemplateResponse("vacaciones.html", {"request": request})
 
 @app.get("/agregar-empleado", response_class=HTMLResponse)
-def form_empleado(request: Request):
-    return templates.TemplateResponse("agregar_empleado.html", {"request": request})
+def form_empleado(request: Request, db: Session = Depends(get_db)):
+    roles = db.query(Role).all()
+    oficinas = db.query(Office).all()
+    return templates.TemplateResponse("agregar_empleado.html", {
+        "request": request,
+        "roles": roles,
+        "oficinas": oficinas
+    })
 
 @app.get("/ver-oficinas", response_class=HTMLResponse)
 def ver_oficinas(request: Request):
@@ -256,30 +272,70 @@ def ver_asignaciones(request: Request):
     return templates.TemplateResponse("ver_asignaciones.html", {"request": request})
 
 @app.get("/crear-oficina", response_class=HTMLResponse)
-def form_crear_oficina(request: Request):
-    return templates.TemplateResponse("crear_oficina.html", {"request": request})
+def form_crear_oficina(request: Request, db: Session = Depends(get_db)):
+    roles = db.query(Role).all()
+    return templates.TemplateResponse("crear_oficina.html", {"request": request, "roles": roles})
 
 @app.post("/crear-oficina")
-def procesar_creacion_oficina(
-    nombre: str = Form(...),
-    descripcion: Optional[str] = Form(None),
-    turno_manana: int = Form(...),
-    turno_tarde: int = Form(...),
+async def procesar_creacion_oficina(
+    request: Request,
     db: Session = Depends(get_db)
 ):
-    # Crear la oficina
+    form = await request.form()
+
+    nombre = form.get("nombre")
+    descripcion = form.get("descripcion")
+
+    turnos = form.getlist("turno")
+    cargos = form.getlist("cargo")
+    cantidades = form.getlist("cantidad")
+
+    if not (len(turnos) == len(cargos) == len(cantidades)):
+        raise HTTPException(status_code=400, detail="Datos de formulario incompletos.")
+
     nueva = Office(nombre=nombre, descripcion=descripcion)
     db.add(nueva)
     db.commit()
     db.refresh(nueva)
 
-    # Insertar requerimientos de turno
-    requerimientos = [
-        OfficeShiftRequirement(office_id=nueva.id, turno="Mañana", cantidad=turno_manana),
-        OfficeShiftRequirement(office_id=nueva.id, turno="Tarde", cantidad=turno_tarde)
-    ]
+    requerimientos = []
+    for turno, cargo, cantidad in zip(turnos, cargos, cantidades):
+        cantidad_int = int(cantidad)
+        if cantidad_int > 0:
+            requerimientos.append(OfficeShiftRequirement(
+                office_id=nueva.id,
+                turno=turno,
+                cargo=cargo,
+                cantidad=cantidad_int
+            ))
+
     db.add_all(requerimientos)
     db.commit()
 
-    # Redirige al mismo formulario con ?success=1 para mostrar mensaje
     return RedirectResponse("/crear-oficina?success=1", status_code=303)
+
+@app.get("/roles/")
+def listar_roles(db: Session = Depends(get_db)):
+    roles = db.query(Role).all()  # Asumiendo que tienes un modelo Role
+    return [{"id": r.id, "nombre": r.nombre} for r in roles]
+
+@app.get("/oficinas-con-requerimientos/")
+def listar_oficinas_con_requerimientos(db: Session = Depends(get_db)):
+    oficinas = db.query(Office).options(joinedload(Office.requerimientos)).all()
+    resultado = []
+    for o in oficinas:
+        resultado.append({
+            "id": o.id,
+            "nombre": o.nombre.strip(),
+            "descripcion": o.descripcion.strip() if o.descripcion else None,
+            "requerimientos": [
+                {
+                    "turno": r.turno.strip(),
+                    "cargo": r.cargo.strip(),
+                    "cantidad": r.cantidad
+                }
+                for r in o.requerimientos
+            ]
+        })
+    return resultado
+

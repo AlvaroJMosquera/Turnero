@@ -12,7 +12,12 @@
       <input type="text" id="cedula" class="form-control mb-2" placeholder="Cédula" required>
       <input type="text" id="nombre" class="form-control mb-2" placeholder="Nombre" required>
       <input type="text" id="apellidos" class="form-control mb-2" placeholder="Apellidos" required>
-      <input type="text" id="cargo" class="form-control mb-2" placeholder="Cargo" required>
+
+      <label for="cargo_id" class="form-label">Cargo</label>
+      <select id="cargo_id" class="form-select mb-3" required>
+        <option value="">Seleccione un cargo</option>
+      </select>
+
       <input type="text" id="celular" class="form-control mb-2" placeholder="Celular">
       <input type="text" id="telefono" class="form-control mb-2" placeholder="Teléfono">
       <input type="text" id="direccion" class="form-control mb-2" placeholder="Dirección">
@@ -47,13 +52,26 @@
       });
     }
 
+    async function cargarRoles() {
+      const res = await fetch("/roles/");
+      const roles = await res.json();
+      const select = document.getElementById("cargo_id");
+
+      roles.forEach(r => {
+        const option = document.createElement("option");
+        option.value = r.id;
+        option.textContent = r.nombre;
+        select.appendChild(option);
+      });
+    }
+
     async function agregarTrabajador(event) {
       event.preventDefault();
       const data = {
         cedula: document.getElementById("cedula").value,
         nombre: document.getElementById("nombre").value,
         apellidos: document.getElementById("apellidos").value,
-        cargo: document.getElementById("cargo").value,
+        cargo_id: parseInt(document.getElementById("cargo_id").value),
         celular: document.getElementById("celular").value,
         telefono: document.getElementById("telefono").value,
         direccion: document.getElementById("direccion").value,
@@ -77,8 +95,10 @@
       }
     }
 
-    // Cargar oficinas al abrir la página
-    window.onload = cargarOficinas;
+    window.onload = () => {
+      cargarOficinas();
+      cargarRoles();
+    };
   </script>
 </body>
 </html>

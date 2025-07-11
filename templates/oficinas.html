@@ -1,94 +1,46 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Gestión de Oficinas</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        h1 { color: #333; }
-        .oficina-card {
-            border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;
-            border-radius: 5px; background-color: #f9f9f9;
-        }
-        .form-group { margin-bottom: 10px; }
-    </style>
+  <meta charset="UTF-8">
+  <title>Oficinas</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
-    <h1>Oficinas</h1>
+<body class="bg-light p-4">
+  <div class="container">
+    <h2 class="mb-4">🏢 Oficinas Registradas</h2>
+    <div id="oficinas-container" class="row gy-3"></div>
+    <a href="/" class="btn btn-secondary mt-4">Volver al Inicio</a>
+  </div>
 
-    <div>
-        <h3>Crear Oficina</h3>
-        <div class="form-group">
-            <input type="text" id="nombre" placeholder="Nombre de la oficina">
-            <input type="number" id="trabajadores_por_turno" placeholder="Trabajadores por turno">
-            <button onclick="crearOficina()">Crear</button>
-        </div>
-    </div>
+  <script>
+    async function cargarOficinas() {
+      const response = await fetch("/oficinas-con-requerimientos/");
+      const oficinas = await response.json();
+      const contenedor = document.getElementById("oficinas-container");
+      contenedor.innerHTML = "";
 
-    <h3>Lista de Oficinas</h3>
-    <div id="lista-oficinas"></div>
+      oficinas.forEach(ofi => {
+        const card = document.createElement("div");
+        card.className = "col-12 col-md-6";
+        card.innerHTML = `
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <h5 class="card-title">${ofi.nombre}</h5>
+              <p class="card-text text-muted">${ofi.descripcion}</p>
+              <h6 class="mt-3">Requerimientos:</h6>
+              <ul class="list-group list-group-flush">
+                ${ofi.requerimientos.map(r =>
+                  `<li class="list-group-item">${r.turno} - ${r.cargo}: <strong>${r.cantidad}</strong></li>`
+                ).join("")}
+              </ul>
+            </div>
+          </div>
+        `;
+        contenedor.appendChild(card);
+      });
+    }
 
-    <script>
-        function cargarOficinas() {
-            fetch("/oficinas/")
-                .then(res => res.json())
-                .then(data => {
-                    const contenedor = document.getElementById("lista-oficinas");
-                    contenedor.innerHTML = "";
-                    data.forEach(ofi => {
-                        const div = document.createElement("div");
-                        div.className = "oficina-card";
-                        div.innerHTML = `
-                            <strong>${ofi.nombre}</strong> - ${ofi.trabajadores_por_turno} personas por turno
-                            <br>
-                            <button onclick="eliminarOficina(${ofi.id})">Eliminar</button>
-                            <button onclick="editarOficina(${ofi.id}, '${ofi.nombre}', ${ofi.trabajadores_por_turno})">Editar</button>
-                        `;
-                        contenedor.appendChild(div);
-                    });
-                });
-        }
-
-        function crearOficina() {
-            const nombre = document.getElementById("nombre").value;
-            const trabajadores = document.getElementById("trabajadores_por_turno").value;
-
-            fetch("/oficinas/", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    nombre,
-                    trabajadores_por_turno: parseInt(trabajadores)
-                })
-            }).then(() => {
-                cargarOficinas();
-                document.getElementById("nombre").value = "";
-                document.getElementById("trabajadores_por_turno").value = "";
-            });
-        }
-
-        function eliminarOficina(id) {
-            fetch(`/oficinas/${id}`, { method: "DELETE" })
-                .then(() => cargarOficinas());
-        }
-
-        function editarOficina(id, nombreActual, trabajadoresActual) {
-            const nuevoNombre = prompt("Nuevo nombre", nombreActual);
-            const nuevoTrab = prompt("N° trabajadores por turno", trabajadoresActual);
-
-            if (nuevoNombre && nuevoTrab) {
-                fetch(`/oficinas/${id}`, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        nombre: nuevoNombre,
-                        trabajadores_por_turno: parseInt(nuevoTrab)
-                    })
-                }).then(() => cargarOficinas());
-            }
-        }
-
-        cargarOficinas();
-    </script>
+    cargarOficinas();
+  </script>
 </body>
 </html>
