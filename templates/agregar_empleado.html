@@ -23,12 +23,30 @@
       <label class="form-label">Fecha de Nacimiento</label>
       <input type="date" id="fecha_nacimiento" class="form-control mb-3" required>
 
+      <label for="office_id" class="form-label">Oficina</label>
+      <select id="office_id" class="form-select mb-3" required>
+        <option value="">Seleccione una oficina</option>
+      </select>
+
       <button type="submit" class="btn btn-success">Registrar</button>
       <a href="/" class="btn btn-secondary ms-2">Volver</a>
     </form>
   </div>
 
   <script>
+    async function cargarOficinas() {
+      const res = await fetch("/offices/");
+      const oficinas = await res.json();
+      const select = document.getElementById("office_id");
+
+      oficinas.forEach(o => {
+        const option = document.createElement("option");
+        option.value = o.id;
+        option.textContent = o.nombre;
+        select.appendChild(option);
+      });
+    }
+
     async function agregarTrabajador(event) {
       event.preventDefault();
       const data = {
@@ -40,7 +58,8 @@
         telefono: document.getElementById("telefono").value,
         direccion: document.getElementById("direccion").value,
         fecha_ingreso: document.getElementById("fecha_ingreso").value,
-        fecha_nacimiento: document.getElementById("fecha_nacimiento").value
+        fecha_nacimiento: document.getElementById("fecha_nacimiento").value,
+        office_id: parseInt(document.getElementById("office_id").value)
       };
 
       const res = await fetch("/workers/", {
@@ -57,6 +76,9 @@
         alert(`❌ Error: ${error.detail}`);
       }
     }
+
+    // Cargar oficinas al abrir la página
+    window.onload = cargarOficinas;
   </script>
 </body>
 </html>

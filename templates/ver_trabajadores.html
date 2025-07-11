@@ -14,11 +14,11 @@
     <table class="table table-bordered">
       <thead>
         <tr>
-          <th>ID</th>
           <th>Nombre</th>
           <th>Apellidos</th>
           <th>Cédula</th>
           <th>Cargo</th>
+          <th>Oficina</th>
           <th>Acciones</th>
         </tr>
       </thead>
@@ -26,7 +26,30 @@
     </table>
   </div>
 
+  <!-- Modal de confirmación -->
+  <div class="modal fade" id="confirmarModal" tabindex="-1" aria-labelledby="confirmarModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title" id="confirmarModalLabel">Confirmar Eliminación</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          ¿Estás seguro de que deseas eliminar este trabajador?
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-danger" id="confirmarEliminarBtn">Eliminar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
+    let trabajadorAEliminar = null;
+
     async function cargarTrabajadores() {
       const res = await fetch("/workers/");
       const data = await res.json();
@@ -35,29 +58,36 @@
       data.forEach(w => {
         tbody.innerHTML += `
           <tr>
-            <td>${w.id}</td>
             <td>${w.nombre}</td>
             <td>${w.apellidos}</td>
             <td>${w.cedula}</td>
             <td>${w.cargo}</td>
+            <td>${w.oficina?.nombre ?? "Sin oficina"}</td>
             <td>
-              <button class="btn btn-danger btn-sm" onclick="eliminarTrabajador(${w.id})">Eliminar</button>
+              <button class="btn btn-danger btn-sm" onclick="abrirModal(${w.id})">Eliminar</button>
             </td>
           </tr>`;
       });
     }
 
-    async function eliminarTrabajador(id) {
-      if (confirm("¿Estás seguro de eliminar este trabajador?")) {
-        const res = await fetch(`/workers/${id}`, { method: "DELETE" });
+    function abrirModal(id) {
+      trabajadorAEliminar = id;
+      const modal = new bootstrap.Modal(document.getElementById('confirmarModal'));
+      modal.show();
+    }
+
+    document.getElementById('confirmarEliminarBtn').addEventListener('click', async () => {
+      if (trabajadorAEliminar !== null) {
+        const res = await fetch(`/workers/${trabajadorAEliminar}`, { method: "DELETE" });
         if (res.ok) {
-          alert("Trabajador eliminado.");
           cargarTrabajadores();
         } else {
           alert("Error al eliminar trabajador.");
         }
+        trabajadorAEliminar = null;
+        bootstrap.Modal.getInstance(document.getElementById('confirmarModal')).hide();
       }
-    }
+    });
 
     cargarTrabajadores();
   </script>

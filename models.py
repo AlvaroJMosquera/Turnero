@@ -9,16 +9,6 @@ from typing import Optional, List
 #      MODELOS ORM      #
 # ===================== #
 
-class Location(Base):
-    __tablename__ = "locations"
-
-    id = Column(Integer, primary_key=True, index=True)
-    nombre = Column(String(100), nullable=False, unique=True)
-    trabajadores_por_turno = Column(Integer, default=1)
-
-    trabajadores = relationship("Worker", back_populates="ubicacion")
-
-
 class Worker(Base):
     __tablename__ = "workers"
 
@@ -34,8 +24,8 @@ class Worker(Base):
     fecha_nacimiento = Column(Date)
     creado_en = Column(DateTime, default=datetime.utcnow)
 
-    location_id = Column(Integer, ForeignKey("locations.id"), nullable=True)
-    ubicacion = relationship("Location", back_populates="trabajadores")
+    office_id = Column(Integer, ForeignKey("offices.id"), nullable=True)
+    oficina = relationship("Office")
 
     registros = relationship("Record", back_populates="trabajador")
     vacaciones = relationship("Vacation", back_populates="trabajador")
@@ -113,7 +103,7 @@ class WorkerCreate(BaseModel):
     direccion: Optional[str] = None
     fecha_ingreso: date
     fecha_nacimiento: date
-    location_id: Optional[int] = None
+    office_id: Optional[int] = None  
 
     class Config:
         from_attributes = True
@@ -146,19 +136,6 @@ class VacationOut(BaseModel):
 
     class Config:
         from_attributes = True
-
-
-# --- Location ---
-class LocationCreate(BaseModel):
-    nombre: str
-    trabajadores_por_turno: int
-
-    class Config:
-        from_attributes = True
-
-
-class LocationResponse(LocationCreate):
-    id: int
 
 
 # --- Office ---

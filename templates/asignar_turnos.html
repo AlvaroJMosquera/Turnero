@@ -1,53 +1,74 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Asignar Turnos Automáticamente</title>
-    <style>
-        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5; }
-        h1, h2 { color: #333; }
-        .resultados { margin-top: 20px; }
-        .oficina-card {
-            background-color: #fff; border: 1px solid #ccc;
-            padding: 15px; margin-bottom: 15px; border-radius: 5px;
-        }
-        ul { list-style: none; padding-left: 0; }
-    </style>
+  <meta charset="UTF-8">
+  <title>Asignar Turnos</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
-    <h1>Asignación Automática de Turnos por Oficina</h1>
-    <button onclick="generar()">Generar Turnos para el Próximo Mes</button>
+<body class="p-4 bg-light">
+  <div class="container">
+    <h2 class="mb-4">Asignación de Turnos para el Próximo Mes</h2>
 
-    <div class="resultados" id="resultados"></div>
+    <button class="btn btn-primary mb-3" onclick="generarAsignaciones()">🧠 Generar Turnos</button>
+    <a href="/" class="btn btn-secondary mb-3 ms-2">← Volver al Inicio</a>
 
-    <script>
-        function generar() {
-            fetch("/asignar-turnos/next-month/")
-                .then(res => res.json())
-                .then(data => {
-                    const cont = document.getElementById("resultados");
-                    cont.innerHTML = "";
+    <div id="resultado" class="mt-4" style="display:none;">
+      <h5>✅ Turnos asignados correctamente:</h5>
+      <table class="table table-bordered table-sm mt-3">
+        <thead class="table-dark">
+          <tr>
+            <th>Fecha</th>
+            <th>Turno</th>
+            <th>Hora Entrada</th>
+            <th>Hora Salida</th>
+            <th>Trabajador</th>
+            <th>Cargo</th>
+            <th>Oficina</th>
+          </tr>
+        </thead>
+        <tbody id="tablaAsignaciones"></tbody>
+      </table>
+    </div>
+  </div>
 
-                    data.forEach(ofi => {
-                        const card = document.createElement("div");
-                        card.className = "oficina-card";
-                        card.innerHTML = `<h2>${ofi.nombre}</h2>`;
+  <script>
+    async function generarAsignaciones() {
+      const btn = event.target;
+      btn.disabled = true;
+      btn.innerText = "Asignando...";
 
-                        ofi.turnos.forEach(turno => {
-                            const ul = document.createElement("ul");
-                            ul.innerHTML = `
-                                <strong>${turno.fecha} (${turno.turno}):</strong>
-                                <ul>
-                                    ${turno.trabajadores.map(t => `<li>${t.nombre} (${t.cedula})</li>`).join("")}
-                                </ul>
-                            `;
-                            card.appendChild(ul);
-                        });
+      const res = await fetch("/asignaciones/generar/", {
+        method: "POST"
+      });
 
-                        cont.appendChild(card);
-                    });
-                });
-        }
-    </script>
+      btn.disabled = false;
+      btn.innerText = "🧠 Generar Turnos";
+
+      if (res.ok) {
+        const data = await res.json();
+        const tabla = document.getElementById("tablaAsignaciones");
+        const resultadoDiv = document.getElementById("resultado");
+        tabla.innerHTML = "";
+
+        data.resumen.forEach(item => {
+          tabla.innerHTML += `
+            <tr>
+              <td>${item.fecha}</td>
+              <td>${item.turno}</td>
+              <td>${item.hora_inicio}</td>
+              <td>${item.hora_fin}</td>
+              <td>${item.trabajador}</td>
+              <td>${item.cargo}</td>
+              <td>${item.oficina}</td>
+            </tr>
+          `;
+        });
+
+        resultadoDiv.style.display = "block";
+      } else {
+        alert("❌ Ocurrió un error al generar los turnos.");
+      }
+    }
+  </script>
 </body>
 </html>

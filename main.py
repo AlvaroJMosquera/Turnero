@@ -1,3 +1,6 @@
+from fastapi import Form
+from fastapi.responses import RedirectResponse
+from typing import Optional
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -15,8 +18,8 @@ from models import (
 )
 from logic import generate_schedule, asignar_y_guardar_turnos
 ## Eliminar y crear tablas ###
-Base.metadata.drop_all(bind=engine)
-Base.metadata.create_all(bind=engine)
+#Base.metadata.drop_all(bind=engine)
+#Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 app.add_middleware(
@@ -53,7 +56,19 @@ def create_worker(worker: WorkerCreate, db: Session = Depends(get_db)):
 
 @app.get("/workers/")
 def list_workers(db: Session = Depends(get_db)):
-    return db.query(Worker).all()
+    trabajadores = db.query(Worker).options(joinedload(Worker.oficina)).all()
+    return [
+        {
+            "id": w.id,
+            "nombre": w.nombre,
+            "apellidos": w.apellidos,
+            "cedula": w.cedula,
+            "cargo": w.cargo,
+            "oficina": {"id": w.oficina.id, "nombre": w.oficina.nombre} if w.oficina else None
+        }
+        for w in trabajadores
+    ]
+
 
 @app.post("/workers/bulk/")
 def create_workers_bulk(workers: List[WorkerCreate], db: Session = Depends(get_db)):
@@ -239,3 +254,32 @@ def asignar_turnos_view(request: Request):
 @app.get("/ver-asignaciones", response_class=HTMLResponse)
 def ver_asignaciones(request: Request):
     return templates.TemplateResponse("ver_asignaciones.html", {"request": request})
+
+@app.get("/crear-oficina", response_class=HTMLResponse)
+def form_crear_oficina(request: Request):
+    return templates.TemplateResponse("crear_oficina.html", {"request": request})
+
+@app.post("/crear-oficina")
+def procesar_creacion_oficina(
+    nombre: str = Form(...),
+    descripcion: Optional[str] = Form(None),
+    turno_manana: int = Form(...),
+    turno_tarde: int = Form(...),
+    db: Session = Depends(get_db)
+):
+    # Crear la oficina
+    nueva = Office(nombre=nombre, descripcion=descripcion)
+    db.add(nueva)
+    db.commit()
+    db.refresh(nueva)
+
+    # Insertar requerimientos de turno
+    requerimientos = [
+        OfficeShiftRequirement(office_id=nueva.id, turno="Mañana", cantidad=turno_manana),
+        OfficeShiftRequirement(office_id=nueva.id, turno="Tarde", cantidad=turno_tarde)
+    ]
+    db.add_all(requerimientos)
+    db.commit()
+
+    # Redirige al mismo formulario con ?success=1 para mostrar mensaje
+    return RedirectResponse("/crear-oficina?success=1", status_code=303)
