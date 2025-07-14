@@ -17,9 +17,15 @@ from models import (
     Office, OfficeShiftRequirement, WorkerAssignment, OfficeCreate, ShiftRequirementCreate,Role
 )
 from logic import generate_schedule, asignar_y_guardar_turnos
+
+from vistas_sql import crear_vista_asignacion_si_no_existe
 ## Eliminar y crear tablas ###
-# Base.metadata.drop_all(bind=engine)
-# Base.metadata.create_all(bind=engine)
+Base.metadata.drop_all(bind=engine)
+Base.metadata.create_all(bind=engine)
+## Crea la vista de asignacion 
+db = SessionLocal()
+crear_vista_asignacion_si_no_existe(db)
+db.close()
 
 def seed_roles(db: Session):
     nombres = ["Médico Veterinario", "Recepcionista"]
@@ -99,9 +105,13 @@ def delete_worker(worker_id: int, db: Session = Depends(get_db)):
     worker = db.query(Worker).filter(Worker.id == worker_id).first()
     if not worker:
         raise HTTPException(status_code=404, detail="Trabajador no encontrado")
+
+    # Eliminar asignaciones relacionadas
+    db.query(WorkerAssignment).filter(WorkerAssignment.worker_id == worker_id).delete()
+
     db.delete(worker)
     db.commit()
-    return {"message": "Trabajador eliminado exitosamente"}
+    return {"message": "Trabajador y asignaciones eliminados correctamente"}
 
 @app.post("/vacaciones/")
 def crear_vacacion(vac: VacationCreate, db: Session = Depends(get_db)):
@@ -124,8 +134,8 @@ def listar_vacaciones(db: Session = Depends(get_db)):
             "nombre": trabajador.nombre,
             "apellidos": trabajador.apellidos,
             "cedula": trabajador.cedula,
-            "fecha_inicio": v.fecha_inicio,
-            "fecha_fin": v.fecha_fin
+            "fecha_inicio": v.fecha_inicio.isoformat(),  
+            "fecha_fin": v.fecha_fin.isoformat()         
         })
     return JSONResponse(content=resultado)
 
@@ -205,8 +215,15 @@ def schedule_all_next_month(db: Session = Depends(get_db)):
     return result
 
 @app.post("/asignaciones/generar/")
-def generar_y_guardar_asignaciones(db: Session = Depends(get_db)):
-    return asignar_y_guardar_turnos(db)
+def generar_y_guardar_asignaciones(
+    db: Session = Depends(get_db),
+    anio: int = Form(...),
+    mes: int = Form(...)
+):
+    start_date, end_date = get_start_end_of_month(anio, mes)
+    resultado = asignar_y_guardar_turnos(db, start_date, end_date)
+    return resultado
+
 
 @app.get("/asignaciones/{office_id}/")
 def ver_asignaciones_oficina(
@@ -216,19 +233,29 @@ def ver_asignaciones_oficina(
     mes: int = date.today().month
 ):
     start, end = get_start_end_of_month(anio, mes)
-    asignaciones = db.query(WorkerAssignment).options(joinedload(WorkerAssignment.worker)).filter(
-        WorkerAssignment.office_id == office_id,
-        WorkerAssignment.fecha >= start,
-        WorkerAssignment.fecha <= end
-    ).all()
+    asignaciones = (
+        db.query(WorkerAssignment)
+        .options(joinedload(WorkerAssignment.worker).joinedload(Worker.rol),
+                 joinedload(WorkerAssignment.office))
+        .filter(
+            WorkerAssignment.office_id == office_id,
+            WorkerAssignment.fecha >= start,
+            WorkerAssignment.fecha <= end
+        )
+        .all()
+    )
 
     resultado = []
     for a in asignaciones:
         resultado.append({
-            "trabajador": f"{a.worker.nombre} {a.worker.apellidos}",
-            "cedula": a.worker.cedula,
+            "fecha": a.fecha.isoformat(),
             "turno": a.turno,
-            "fecha": a.fecha.isoformat()
+            "hora_inicio": "07:00" if a.turno == "Mañana" else "19:00",
+            "hora_fin": "19:00" if a.turno == "Mañana" else "07:00",
+            "trabajador": f"{a.worker.nombre} {a.worker.apellidos}",
+            "cargo": a.worker.rol.nombre if a.worker.rol else None,
+            "oficina": a.office.nombre if a.office else None,
+            "cedula": a.worker.cedula
         })
 
     return resultado

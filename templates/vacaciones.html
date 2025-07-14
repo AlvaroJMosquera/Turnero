@@ -7,17 +7,17 @@
 </head>
 <body class="p-4">
   <div class="container">
-    <h2 class="mb-4">Vacaciones de Empleados</h2>
-    <button class="btn btn-secondary btn-volver" onclick="window.history.back()">← Volver</button>
+    <h2 class="mb-4">🌴 Vacaciones de Empleados</h2>
+    <button class="btn btn-secondary mb-3" onclick="window.history.back()">← Volver</button>
 
     <!-- FORMULARIO REGISTRAR VACACIONES -->
     <h4 class="mt-4">Registrar Vacaciones</h4>
     <form onsubmit="registrarVacaciones(event)" class="row g-3 mb-4">
-      <div class="col-md-3">
-        <input type="number" id="worker_id" class="form-control" placeholder="Nor" required>
-      </div>
-      <div class="col-md-3">
-        <input type="number" id="worker_id" class="form-control" placeholder="ID del Trabajador" required>
+      <div class="col-md-4">
+        <select id="selectTrabajador" class="form-select" required>
+          <option value="">Seleccione un trabajador</option>
+        </select>
+        <input type="hidden" id="worker_id">
       </div>
       <div class="col-md-3">
         <input type="date" id="fecha_inicio" class="form-control" required>
@@ -25,14 +25,14 @@
       <div class="col-md-3">
         <input type="date" id="fecha_fin" class="form-control" required>
       </div>
-      <div class="col-md-3">
-        <button type="submit" class="btn btn-success">Registrar</button>
+      <div class="col-md-2">
+        <button id="btnRegistrar" type="submit" class="btn btn-success w-100">Registrar</button>
       </div>
     </form>
 
     <!-- BOTÓN CONSULTA PRÓXIMAS VACACIONES -->
     <h4 class="mt-4">Próximos a salir a Vacaciones</h4>
-    <button class="btn btn-warning mb-3" onclick="consultarVacaciones()">Ver trabajadores próximos</button>
+    <button class="btn btn-warning mb-3" onclick="consultarVacaciones()">🔍 Ver trabajadores próximos</button>
 
     <!-- TABLA VACACIONES PRÓXIMAS -->
     <table id="tablaVacaciones" class="table table-striped d-none">
@@ -50,7 +50,7 @@
 
     <!-- VACACIONES REGISTRADAS -->
     <h4 class="mt-5">Vacaciones Registradas</h4>
-    <button class="btn btn-secondary mb-3" onclick="cargarVacacionesRegistradas()">Ver vacaciones registradas</button>
+    <button class="btn btn-secondary mb-3" onclick="cargarVacacionesRegistradas()">📋 Ver vacaciones registradas</button>
 
     <table id="tablaVacacionesRegistradas" class="table table-bordered d-none">
       <thead>
@@ -68,35 +68,44 @@
 
   <!-- SCRIPTS -->
   <script>
-    async function consultarVacaciones() {
-      const res = await fetch("/workers/proximas-vacaciones/");
-      const data = await res.json();
-      const tbody = document.querySelector("#tablaVacaciones tbody");
-      tbody.innerHTML = "";
+    // Cargar trabajadores en el dropdown
+    async function cargarTrabajadores() {
+      const res = await fetch("/workers/");
+      const trabajadores = await res.json();
+      const select = document.getElementById("selectTrabajador");
 
-      if (data.length === 0) {
-        alert("No hay trabajadores próximos a vacaciones.");
-      }
-
-      data.forEach(w => {
-        tbody.innerHTML += `
-          <tr>
-            <td>${w.nombre}</td>
-            <td>${w.apellidos}</td>
-            <td>${w.cedula}</td>
-            <td>${w.fecha_ingreso}</td>
-            <td>${w.fecha_vacaciones}</td>
-          </tr>`;
+      trabajadores.forEach(t => {
+        const option = document.createElement("option");
+        option.value = t.id;
+        option.textContent = `${t.nombre} ${t.apellidos} (${t.cargo})`;
+        select.appendChild(option);
       });
 
-      document.getElementById("tablaVacaciones").classList.remove("d-none");
+      select.addEventListener("change", () => {
+        document.getElementById("worker_id").value = select.value;
+      });
     }
 
+    // Registrar vacaciones
     async function registrarVacaciones(event) {
       event.preventDefault();
       const worker_id = document.getElementById("worker_id").value;
       const fecha_inicio = document.getElementById("fecha_inicio").value;
       const fecha_fin = document.getElementById("fecha_fin").value;
+      const btn = document.getElementById("btnRegistrar");
+
+      if (!worker_id) {
+        alert("⚠️ Por favor seleccione un trabajador.");
+        return;
+      }
+
+      if (new Date(fecha_fin) < new Date(fecha_inicio)) {
+        alert("❌ La fecha de fin no puede ser anterior a la de inicio.");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerText = "Registrando...";
 
       const res = await fetch("/vacaciones/", {
         method: "POST",
@@ -104,11 +113,13 @@
         body: JSON.stringify({ worker_id, fecha_inicio, fecha_fin }),
       });
 
+      btn.disabled = false;
+      btn.innerText = "Registrar";
+
       if (res.ok) {
         alert("✅ Vacaciones registradas con éxito.");
+        document.querySelector("form").reset();
         document.getElementById("worker_id").value = "";
-        document.getElementById("fecha_inicio").value = "";
-        document.getElementById("fecha_fin").value = "";
         cargarVacacionesRegistradas();
       } else {
         const error = await res.json();
@@ -116,6 +127,32 @@
       }
     }
 
+    // Consultar trabajadores próximos a vacaciones
+    async function consultarVacaciones() {
+      const res = await fetch("/workers/proximas-vacaciones/");
+      const data = await res.json();
+      const tbody = document.querySelector("#tablaVacaciones tbody");
+      tbody.innerHTML = "";
+
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">No hay trabajadores próximos a vacaciones.</td></tr>`;
+      } else {
+        data.forEach(w => {
+          tbody.innerHTML += `
+            <tr>
+              <td>${w.nombre}</td>
+              <td>${w.apellidos}</td>
+              <td>${w.cedula}</td>
+              <td>${w.fecha_ingreso}</td>
+              <td>${w.fecha_vacaciones}</td>
+            </tr>`;
+        });
+      }
+
+      document.getElementById("tablaVacaciones").classList.remove("d-none");
+    }
+
+    // Vacaciones ya registradas
     async function cargarVacacionesRegistradas() {
       const res = await fetch("/vacaciones/lista/");
       const data = await res.json();
@@ -123,22 +160,25 @@
       tbody.innerHTML = "";
 
       if (data.length === 0) {
-        alert("No hay vacaciones registradas.");
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">No hay vacaciones registradas.</td></tr>`;
+      } else {
+        data.forEach(v => {
+          tbody.innerHTML += `
+            <tr>
+              <td>${v.nombre}</td>
+              <td>${v.apellidos}</td>
+              <td>${v.cedula}</td>
+              <td>${v.fecha_inicio}</td>
+              <td>${v.fecha_fin}</td>
+            </tr>`;
+        });
       }
-
-      data.forEach(v => {
-        tbody.innerHTML += `
-          <tr>
-            <td>${v.nombre}</td>
-            <td>${v.apellidos}</td>
-            <td>${v.cedula}</td>
-            <td>${v.fecha_inicio}</td>
-            <td>${v.fecha_fin}</td>
-          </tr>`;
-      });
 
       document.getElementById("tablaVacacionesRegistradas").classList.remove("d-none");
     }
+
+    // Inicialización
+    cargarTrabajadores();
   </script>
 </body>
 </html>

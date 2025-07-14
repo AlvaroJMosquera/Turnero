@@ -23,16 +23,9 @@ def generate_schedule(worker: Worker, start_date: date, end_date: date) -> List[
 
     return dias
 
-def asignar_y_guardar_turnos(db: Session):
+def asignar_y_guardar_turnos(db: Session, start: date, end: date):
     oficinas = db.query(Office).options(joinedload(Office.requerimientos)).all()
     trabajadores = db.query(Worker).options(joinedload(Worker.vacaciones), joinedload(Worker.rol)).all()
-
-    hoy = date.today()
-    start = date(hoy.year, hoy.month, 1)
-    next_month = hoy.month + 1 if hoy.month < 12 else 1
-    next_year = hoy.year + 1 if next_month == 1 else hoy.year
-    last_day = calendar.monthrange(next_year, next_month)[1]
-    end = date(next_year, next_month, last_day)
 
     db.query(WorkerAssignment).filter(
         WorkerAssignment.fecha.between(start, end)
@@ -46,13 +39,15 @@ def asignar_y_guardar_turnos(db: Session):
 
         cargos = {}
         for t in trabajadores_oficina:
-            rol_nombre = t.rol.nombre
+            rol_nombre = t.rol.nombre.strip()
             cargos.setdefault(rol_nombre, []).append(t)
 
         ciclos = {}
-        for grupo in cargos.values():
-            for t in grupo:
-                turno_inicial = random.choice(["Mañana", "Tarde"])
+        for cargo, grupo in cargos.items():
+            grupo_ordenado = sorted(grupo, key=lambda t: t.id)
+            mitad = len(grupo_ordenado) // 2
+            for i, t in enumerate(grupo_ordenado):
+                turno_inicial = "Mañana" if i < mitad else "Tarde"
                 ciclos[t.id] = {
                     "turno_actual": turno_inicial,
                     "dias_trabajados": 0,
@@ -62,6 +57,11 @@ def asignar_y_guardar_turnos(db: Session):
                     "horas_por_semana": defaultdict(int)
                 }
 
+        requerimientos_agrupados = defaultdict(int)
+        for r in oficina.requerimientos:
+            clave = (r.cargo.strip(), r.turno.strip())
+            requerimientos_agrupados[clave] += r.cantidad
+
         fecha = start
         while fecha <= end:
             semana_actual = fecha.isocalendar().week
@@ -70,19 +70,15 @@ def asignar_y_guardar_turnos(db: Session):
                 hora_fin = "19:00:00" if turno == "Mañana" else "7:00:00"
                 duracion_turno = 12
 
-                requerimientos = [r for r in oficina.requerimientos if r.turno == turno]
+                for (cargo, turno_req), cantidad_requerida in requerimientos_agrupados.items():
+                    if turno_req != turno:
+                        continue
 
-                for req in requerimientos:
-                    cargo = req.cargo
                     grupo = cargos.get(cargo, [])
                     random.shuffle(grupo)
-                    cantidad_requerida = req.cantidad
                     asignados = 0
 
                     for t in grupo:
-                        if asignados >= cantidad_requerida:
-                            break
-
                         estado = ciclos[t.id]
                         historial = estado["historial"]
 
@@ -91,24 +87,29 @@ def asignar_y_guardar_turnos(db: Session):
                         if any(h["fecha"] == fecha for h in historial):
                             continue
 
-                        dias_consecutivos = 1
+                        dias_consecutivos = 0
                         for i in range(1, 4):
-                            if any(h["fecha"] == fecha - timedelta(days=i) for h in historial):
+                            dia_anterior = fecha - timedelta(days=i)
+                            if any(h["fecha"] == dia_anterior for h in historial):
                                 dias_consecutivos += 1
                             else:
                                 break
 
-                        if estado["dias_descanso"] > 0:
+                        if dias_consecutivos >= 3:
+                            continue
+
+                        ya_tiene_turno_hoy = any(h["fecha"] == fecha and h["turno"] != turno for h in historial)
+                        if ya_tiene_turno_hoy:
+                            continue
+
+                        if estado["horas_por_semana"][semana_actual] + duracion_turno > 48:
+                            continue
+
+                        if estado["dias_descanso"] > 0 and dias_consecutivos < 2:
                             estado["dias_descanso"] -= 1
                             continue
 
-                        if estado["horas_por_semana"][semana_actual] + duracion_turno > 44:
-                            continue
-
-                        if dias_consecutivos > 3:
-                            continue
-
-                        if estado["turno_actual"] != turno:
+                        if estado["turno_actual"] != turno and dias_consecutivos < 2:
                             continue
 
                         db.add(WorkerAssignment(
@@ -138,19 +139,30 @@ def asignar_y_guardar_turnos(db: Session):
                             "oficina": oficina.nombre
                         })
 
-                    if asignados < cantidad_requerida:
-                        for _ in range(cantidad_requerida - asignados):
-                            resumen.append({
-                                "fecha": fecha.isoformat(),
-                                "turno": turno,
-                                "hora_inicio": hora_inicio,
-                                "hora_fin": hora_fin,
-                                "trabajador": "No disponible",
-                                "cargo": cargo,
-                                "oficina": oficina.nombre
-                            })
+                        if asignados >= cantidad_requerida:
+                            break
+
+                    for _ in range(cantidad_requerida - asignados):
+                        resumen.append({
+                            "fecha": fecha.isoformat(),
+                            "turno": turno,
+                            "hora_inicio": hora_inicio,
+                            "hora_fin": hora_fin,
+                            "trabajador": "No disponible",
+                            "cargo": cargo,
+                            "oficina": oficina.nombre
+                        })
 
             fecha += timedelta(days=1)
 
     db.commit()
     return {"resumen": resumen}
+
+def trabajadores_disponibles(db: Session, fecha: date):
+    trabajadores = db.query(Worker).options(joinedload(Worker.vacaciones), joinedload(Worker.rol)).all()
+    disponibles = []
+    for t in trabajadores:
+        if any(v.fecha_inicio <= fecha <= v.fecha_fin for v in t.vacaciones):
+            continue
+        disponibles.append(f"{t.nombre} {t.apellidos} - {t.rol.nombre if t.rol else 'Sin rol'}")
+    return disponibles
